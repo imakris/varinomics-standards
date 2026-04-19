@@ -115,6 +115,14 @@ This section defines the default C++ style for Varinomics products.
 - Identifiers must use `snake_case` unless a rule below says otherwise.
 - Identifiers must not start or end with `_`.
 - File names must be lowercase `snake_case`.
+- Names copied directly from an external API, protocol, file format, wire
+  contract, callback signature, or inherited interface may keep the external
+  spelling when mirroring that foreign name improves clarity or is required by
+  the interface.
+- Product-owned local variables, parameters, and members should use this
+  guideline's naming rules even inside adapter code. Do not propagate a foreign
+  naming style to adjacent local declarations merely because nearby library code
+  uses it.
 
 Good:
 
@@ -253,8 +261,14 @@ if (blah1 && blah2 &&
 ### 5.7 Short one-line forms
 
 - Trivially short functions may stay on one line.
+- A short consecutive block of trivial pure helper functions should remain on one
+  line when each helper fits cleanly and the group reads as one scannable block.
 - Intentional no-op functions may use `{}` on one line.
 - Consecutive short helpers may be aligned on one line when that improves scanning.
+- Preserve an aligned block of consecutive trivial one-line helpers when the
+  alignment improves comparison.
+- Do not expand a coherent one-line helper block into multi-line bodies unless
+  another rule clearly requires it.
 - Single-line control statements may be used only for a tight, consecutive group of
   short statements. Do not use the one-line form for an isolated guard.
 
@@ -262,22 +276,48 @@ if (blah1 && blah2 &&
 double Port_assembly::target_vctrl_voltage() { return m_target_vctrl_voltage; }
 void install_unhandled_exception_handler() {}
 
+static constexpr int frameWidth()        noexcept { return 1; }
+static constexpr int horizontalPadding() noexcept { return 6; }
+static constexpr int iconSpacing()       noexcept { return 4; }
+
 if (value < vmin) { vmin = value; }
 if (value > vmax) { vmax = value; }
 ```
 
 ### 5.8 Wrapped parameter lists, template lists, and initializer lists
 
-- When a function declaration, definition, or call wraps, the preferred form is
-  to break immediately after `(`.
+- When a function declaration, definition, or call wraps, choose a deliberate
+  wrapped form rather than drifting into an accidental partial wrap.
+- Two common wrapped forms are allowed: a compact line split or an argument
+  split after `(`.
+- A compact line split keeps simple leading arguments on the first line and
+  moves a long or structured trailing argument or suffix to a following line.
+- An argument split breaks immediately after `(` and places one argument per
+  line or in small scannable groups.
 - Do not use a hanging-indent style where later parameters are lined up under the
   first parameter or under text from the first line.
 - Wrapped parameters may stay compact on one continuation line when the types and
   names remain easy to read.
+- In repetitive blocks of similar calls, a compact line split may be preferable
+  when it keeps the block tight without harming scanability.
 - If the parameter types are visually dense or hard to scan, put one parameter on
   each following line.
+- If a wrapped parameter list contains pointer-heavy, reference-heavy, or
+  otherwise visually dense parameter types, prefer one parameter per line over a
+  compressed continuation line even when the compressed form would fit.
+- If one wrapped argument is itself visually dense or internally structured, such
+  as a flag bitmask, stream chain, boolean chain, or nested conditional
+  expression, do not compress that argument onto the same continuation line as
+  preceding simple arguments.
+- When one argument is an operator chain, preserve that argument's own visual
+  structure even if the compressed form would still fit under the line-length
+  limit.
 - Vertical alignment of types and names across wrapped parameter lines is allowed
   when it materially improves scanability.
+- For dense wrapped signatures, aligned type and name columns are preferred when
+  the alignment makes the parameter list read as a clear table.
+- Do not recompress a wrapped parameter list into a dense continuation line
+  merely because the result fits under the line-length limit.
 - The closing `)` may either align with the start of the function statement or
   stay on its own final parameter line. Use one of those two forms consistently
   within the local block.
@@ -296,7 +336,8 @@ if (value > vmax) { vmax = value; }
 - Constructor initializer lists must start after a blank line.
 - Put `:` on its own line, aligned with the function declaration or definition.
 - Put each initializer on its own following line, indented one level.
-- Use trailing commas at the end of initializer lines. Do not use leading commas.
+- Place commas at the ends of initializer lines. Do not use a leading-comma
+  layout.
 
 ```cpp
 void update_and_write(
@@ -321,6 +362,21 @@ static std::filesystem::path resolve_font_path(
     const std::filesystem::path& font_root,
     Pdf_font font
 );
+
+void update_geometry_node(
+    QQuickWindow*               window,
+    QSGNode*                    parent,
+    QSGGeometryNode*&           node,
+    const std::vector<QPointF>& points,
+    QSGGeometry::DrawingMode    mode,
+    const QColor&               color);
+
+const auto glyph_runs = line.glyphRuns(
+    0,
+    line.textLength(),
+    QTextLayout::RetrieveGlyphIndexes   |
+    QTextLayout::RetrieveGlyphPositions |
+    QTextLayout::RetrieveStringIndexes);
 
 Example(
     QObject* parent,
@@ -355,6 +411,12 @@ static std::filesystem::path resolve_font_path(const font_source_t& source,
                                                const std::filesystem::path& font_root,
                                                Pdf_font font);
 
+const auto glyph_runs = line.glyphRuns(0, line.textLength(),
+    QTextLayout::RetrieveGlyphIndexes | QTextLayout::RetrieveGlyphPositions | QTextLayout::RetrieveStringIndexes);
+
+void update_geometry_node(QQuickWindow* window, QSGNode* parent, QSGGeometryNode*& node,
+    const std::vector<QPointF>& points, QSGGeometry::DrawingMode mode, const QColor& color);
+
 using block_t = std::variant<paragraph_block_t,
                              heading_block_t,
                              list_block_t,
@@ -372,6 +434,9 @@ using block_t = std::variant<paragraph_block_t,
 - Do not place `case` labels flush with the `switch` body indentation.
 - For short pure dispatch switches, compact one-line `case ...: return ...;`
   forms are preferred when the arms fit cleanly and remain easy to scan.
+- When every arm is a short direct `return` or `break`, keep the switch in that
+  compact form even if an auto-formatter would expand each arm into a multi-line
+  block.
 - Consecutive compact `case` lines may be vertically aligned when that improves
   scanability.
 - When consecutive compact `case ...: return ...;` lines are aligned, pad shorter
@@ -408,6 +473,14 @@ switch (style) {
     case Inline_style::NORMAL:
     default:                        return Pdf_font::REGULAR;
 }
+
+switch (eff) {
+    case FontQuality::QualityDefault:         return QFont::PreferDefault;
+    case FontQuality::QualityNonAntialiased:  return QFont::NoAntialias;
+    case FontQuality::QualityAntialiased:
+    case FontQuality::QualityLcdOptimized:    return QFont::PreferAntialias;
+    default:                                  return QFont::PreferDefault;
+}
 ```
 
 Not allowed:
@@ -417,6 +490,18 @@ switch (style) {
 case Display_style::DOTS: return dots;
 case Display_style::AREA: return area;
 default: return line;
+}
+
+switch (eff) {
+    case FontQuality::QualityDefault:
+        return QFont::PreferDefault;
+    case FontQuality::QualityNonAntialiased:
+        return QFont::NoAntialias;
+    case FontQuality::QualityAntialiased:
+    case FontQuality::QualityLcdOptimized:
+        return QFont::PreferAntialias;
+    default:
+        return QFont::PreferDefault;
 }
 
 if (ready) {
@@ -453,19 +538,69 @@ if ((c & 0xF8) == 0xF0) {
 
 ### 5.10 Spacing and formatting
 
-- The default line-length target is 120 columns. Exceed it only when the result is
-  clearly easier to read than the wrapped form.
+- Readability, not line packing, governs line length.
+- Treat roughly 100 columns as a warning signal: consider whether splitting the
+  line would improve scanability, especially when it is much longer than its
+  neighbors.
+- Treat 120 columns as a strong limit, not as a formatting goal.
+- Prefer shorter lines when they expose structure more clearly, even if a denser
+  form would still fit under 120 columns.
+- Once a line grows past roughly 80 columns, consider whether folding it would
+  improve scanability.
+- Past roughly 100 columns, a line should usually remain that long only when the
+  longer form is clearly the best-scanning layout.
+- Exceed 120 columns only when the result is clearly easier to read than the
+  wrapped form.
 - Use one space after commas and around binary operators.
 - Bind `*` and `&` to the type: `Type* name`, `Type& name`.
 - Do not leave trailing whitespace.
 - Every file must end with a newline.
 - Intentional vertical alignment is allowed and encouraged for short groups of
   related lines when it makes comparison faster to read.
+- Preserve existing intentional alignment in short, semantically related, stable
+  blocks when it improves comparison or makes the block faster to scan.
+- Do not de-align a short coherent block merely to normalize whitespace if the
+  alignment does not conflict with another rule and still reads cleanly.
+- For compact reset, initialization, or mapping blocks with repeated `=`
+  assignments, aligned `=` is preferred when the variables form a clear related
+  group and the alignment materially improves scanability.
+- The same rule applies to short aligned declaration groups. When several nearby
+  declarations share the same type-and-initializer shape, preserving aligned
+  names and `=` columns is preferred when it makes the block easier to compare.
+- Use common sense when aligning declaration groups. Prefer alignment when the
+  lines are similarly shaped, the extra padding is modest, and the block reads
+  as one coherent table.
+- Do not force a short or simple declaration to align under a much longer or
+  denser neighboring declaration when that would add large empty gaps or make
+  the simpler line look visually subordinate to the longer one.
+- Alignment should help comparison within a coherent group, not make unrelated
+  declarations look artificially uniform.
 - Do not apply alignment mechanically across large, unstable, or weakly related
   blocks.
 - For wrapped expression chains such as stream insertion or other repeated
   operators, continue on the next line with a normal continuation indent by
   default.
+- Do not recompress a wrapped call or expression merely because the recompressed
+  form still fits under 120 columns.
+- When a wrapped braced initializer contains a nested constructor or call as one
+  of its elements, keep that nested expression visually structured instead of
+  collapsing it into a dense continuation line.
+- The same rule applies when a nested constructor or call is passed as one
+  argument to an outer call: preserve the inner expression's structure when that
+  makes the element boundaries or argument roles easier to scan.
+- Inside compact brace-init blocks, treat each structured element as a visual
+  unit. Do not flatten a previously clear nested `QRectF(...)`, `QPointF(...)`,
+  or similar constructor just because the flattened form still fits.
+- For wrapped ternary expressions, make the `?` and `:` structure visually clear.
+  If one arm is substantially longer or denser than the condition, put the
+  branches on their own continuation lines instead of letting a long arm dangle
+  off the condition line.
+- When a wrapped ternary arm is itself a structured call or constructor, format
+  that arm as a subordinate block under the `?` or `:` so the conditional shape
+  stays primary.
+- Do not flatten a ternary back onto one line merely because it now fits under
+  the line-length limit if the wrapped form makes the condition and branches
+  easier to scan.
 - The base expression may stand on its own line only when the chain is highly
   repetitive and the operands form a uniform vertical list.
 - Do not use deep hanging indentation that lines continuation operators up under
@@ -481,11 +616,62 @@ const auto reason = ws->closeReason();
 width  = function(something_1, something_else_2);
 height = function(something_2, something_else_1);
 
+device        = nullptr;
+painter       = nullptr;
+device_owned  = false;
+painter_owned = false;
+capture_only  = false;
+
+const qreal dpr         = std::max<qreal>(1.0, window->effectiveDevicePixelRatio());
+const QRectF normalized = rect.normalized();
+const qreal left        = std::floor(normalized.left()  * dpr) / dpr;
+const qreal top         = std::floor(normalized.top()   * dpr) / dpr;
+const qreal right       = std::ceil(normalized.right()  * dpr) / dpr;
+const qreal bottom      = std::ceil(normalized.bottom() * dpr) / dpr;
+
+const qreal dpr     = std::max<qreal>(1.0, window->effectiveDevicePixelRatio());
+const qreal pixel   = physical_pixel_size(window);
+const int width_px  = std::max(1, static_cast<int>(std::round(whole_rect.width()  * dpr)));
+const int height_px = std::max(1, static_cast<int>(std::round(whole_rect.height() * dpr)));
+
 image_stream
     << "<< /Type /XObject /Subtype /Image /Width " << image.width_px()
     << " /Height " << image.height_px() << " /ColorSpace "
     << (image.color_components() == 1 ? "/DeviceGray" : "/DeviceRGB")
     << " /BitsPerComponent 8";
+
+const auto glyph_runs = line.glyphRuns(
+    0,
+    line.textLength(),
+    QTextLayout::RetrieveGlyphIndexes   |
+    QTextLayout::RetrieveGlyphPositions |
+    QTextLayout::RetrieveStringIndexes);
+
+rects.push_back({
+    QRectF(
+        snapped.left() + static_cast<qreal>(pixel) * physical_pixel,
+        snapped.top(),
+        physical_pixel,
+        physical_pixel),
+    color,
+});
+
+return wid
+    ? PRectangle(
+          window(wid)->x(),                         window(wid)->y(),
+          window(wid)->x() + window(wid)->width(), window(wid)->y() + window(wid)->height())
+    : PRectangle(0, 0, 1000, 1000);
+
+const qreal dpr = item.window()
+    ? std::max<qreal>(1.0, item.window()->effectiveDevicePixelRatio())
+    : 1.0;
+```
+
+Not allowed:
+
+```cpp
+const int height_px = std::max(1, static_cast<int>(std::round(whole_rect.height() * dpr)));
+int idx             = 0;
 ```
 
 ### 5.11 Macros
@@ -493,6 +679,11 @@ image_stream
 - Keep multi-line macro continuations visually tidy.
 - Either place each trailing `\` one space after the final token or align the `\`
   characters to the same column within that macro.
+- Prefer the minimal-spacing form by default: place the trailing `\` one space
+  after the final token unless wider alignment within that macro clearly
+  improves scanability.
+- Do not pad a tidy macro out with large horizontal whitespace merely to push
+  the trailing `\` toward a far-right column.
 - Use one style per macro.
 
 ```cpp
@@ -525,6 +716,10 @@ constexpr double k_eps = 1e-6;
 - Use classes for behavioral or owning types.
 - Large classes with heavy private dependencies should use PIMPL.
 - Within a class, order sections as `public`, `protected`, then `private`.
+- Access labels must be flush with the class body's baseline indentation. Do not
+  indent `public:`, `protected:`, or `private:` one extra level under the class.
+- Apply the same layout rule to Qt section labels such as `signals:`,
+  `public slots:`, `protected slots:`, and `private slots:`.
 - Group members by subsystem or responsibility rather than by declaration kind alone.
 
 ```cpp

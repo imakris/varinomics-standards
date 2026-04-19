@@ -2,13 +2,13 @@
 
 ## Purpose and audience
 
-This document is a companion to `varinomics_coding_style_guideline.md`. It exists to communicate a layer of *judgment-based* formatting that sits on top of the rules in the main guide.
+This document is a companion to `varinomics_coding_style_guideline.md`. It exists to communicate a layer of judgment-based formatting that sits on top of the rules in the main guide.
 
-The main guide is written for humans and is intentionally concise. It tells you what you `must` do, what you `should` do, and what is `not allowed`. This addendum does something different: it shows, through many concrete before/after examples, what "good judgment" looks like once the hard rules have been satisfied. It is aimed primarily at LLMs that need to reproduce a house style across files they have never seen, and at humans who want to understand *why* a given block was formatted the way it was.
+The main guide remains the canonical baseline. This addendum does two narrower things: it records refinements that are intended house style when they apply, and it shows heuristics for making contextual formatting decisions once the baseline rules have been satisfied. It is aimed primarily at LLMs that need to reproduce a house style across files they have never seen, and at humans who want to understand why a given block was formatted the way it was.
 
 Three things to keep in mind while reading:
 
-1. **These are not new rules, they are pattern-recognition examples.** The rules in the main guide always win. When a pattern below conflicts with an explicit rule in the main guide, the rule wins.
+1. **This document mixes refinements and heuristics.** Some patterns below are intended house style when they apply; others are examples of judgment. When this addendum conflicts with an explicit rule in the main guide, the main guide wins.
 2. **Formatting here is judgment, not mechanics.** A linter or auto-formatter will not reproduce this output faithfully. Convergence under a mechanical pass produces shallow, uniform-looking code; the patterns in this addendum deliberately reward human/LLM judgment of local structure.
 3. **Finding "nothing to do" is a valid and desirable outcome.** Many of the rules below describe what to do *when* a block has certain properties. When it doesn't, leave it alone. Drift toward uniformity for its own sake is a failure mode, not a success.
 
@@ -224,24 +224,31 @@ Two alignments happen together here:
 
 This pattern is what the earlier Pattern 1 rules call "coherent operation" alignment taken one level deeper: not only do the outer `=` and the outer call arguments line up, but the *inner* type parameters and inner function-call arguments also line up. The cost is a couple of unusual whitespace insertions; the payoff is that the three rows read as one 2D table where every syntactically-corresponding token is in its own column.
 
-**When to do this:** only when the rows form a single coherent operation (see Pattern 1), the syntactic shape is parallel enough that the inner alignment is meaningful, and the resulting padding is modest (a few spaces). Aggressive inner-token padding on unrelated lines is not an improvement.
+**When to do this:** only when the rows form a single coherent operation (see Pattern 1), the syntactic shape is parallel enough that the inner alignment is meaningful, and the resulting padding is modest. This kind of nested alignment may extend to omitted optional arguments and to inner callee names when that makes the omission or correspondence visually explicit.
+
+**When to stop:** stop pushing the alignment inward once the added padding creates large gaps, fights a wrap decision, or stops exposing a meaningful relationship between the rows. The goal is to reveal structure, not to recursively align every token.
 
 **Counter-example:** don't do this on three independent `static_cast<>` calls that happen to be near each other in source but compute unrelated things. The alignment is only useful when the reader's eye is already comparing the rows as variants of the same calculation.
 
 ---
 
-## Pattern 2 — Break wrapped calls and declarations after `(`
+## Pattern 2 — Wrapped calls and declarations: choose line split or argument split
 
-When a function declaration, definition, or call wraps, break **immediately after the opening `(`**. Never wrap partway ("first-line-then-wrap"). Never use hanging indent where later arguments line up under the first one.
+When a declaration, definition, or call no longer reads cleanly on one line, choose one of two deliberate shapes:
 
-**Before (not allowed):**
+1. **Line split.** Keep the simple leading part of the call on the first line and move a long or structured trailing argument or suffix to the next line.
+2. **Argument split.** Break immediately after the opening `(` and put one argument per line, or small scannable groups per line.
+
+The choice is contextual. The point is not to force every wrapped call into the same shape; it is to pick the shape that best exposes the structure of the local block.
+
+**Line split is often better** when the call shape is repetitive, only one trailing argument is long, and forcing one-argument-per-line would add bulk without revealing anything new.
 
 ```cpp
-void sync_text_nodes_by_key(QQuickWindow* window, QSGNode* parent, std::vector<Scene_graph_frame_text_node*>& nodes,
-    const std::vector<Visual_line_frame>& visual_lines, const QRectF& viewport)
+ok &= check(nearly_equal(ind.rect.bottom(), expected_bottom), id,
+    "indicator rect bottom must stay within the indicator line");
 ```
 
-**After:**
+**Argument split is often better** when the arguments are numerous, dense, or intentionally varied, and the reader should compare them one by one.
 
 ```cpp
 void sync_text_nodes_by_key(
@@ -249,20 +256,12 @@ void sync_text_nodes_by_key(
     QSGNode*                                   parent,
     std::vector<Scene_graph_frame_text_node*>& nodes,
     const std::vector<Visual_line_frame>&      visual_lines,
-    const QRectF&                              viewport)
+    const QRectF&                              viewport);
 ```
-
-Every argument goes on its own line, and the type column is padded so the parameter names line up as a table. The padding is driven by the longest type in the list.
 
 The same applies to wrapped function calls:
 
 ```cpp
-// Before:
-m_core->current_render_frame(nullptr, static_content_dirty,
-    m_render_data->style_sync_needed && static_content_dirty, m_render_data->scrolling_update,
-    capture_buffer_lines);
-
-// After:
 m_core->current_render_frame(
     nullptr,
     static_content_dirty,
@@ -271,59 +270,40 @@ m_core->current_render_frame(
     capture_buffer_lines);
 ```
 
-**Short and simple calls stay on one line.** This rule only fires when the call is long enough to need wrapping, *or* when every argument is visually dense enough that one-per-line reveals structure that would otherwise be lost.
-
-**Counter-example — don't wrap what fits cleanly:**
+**Avoid accidental hybrids.** Opening after `(` and then keeping an arbitrary dense remainder on the next line usually loses the benefit of both shapes.
 
 ```cpp
-// Leave this alone:
+// Avoid this simple-case hybrid:
+ok &= check(
+    nearly_equal(sel.rect.right(), expected_right), id,
+    "selection rect right edge must match the selected text end");
+```
+
+**Short and simple calls stay on one line.** Do not wrap a call that already reads cleanly just because some nearby call had to wrap.
+
+```cpp
 sync_text_nodes_by_key(window, m_text_group, m_text_nodes, frame.visual_lines, frame.text_rect);
 ```
 
-The whole call is ~95 columns, fits on one line, no structure would be revealed by wrapping. Keep it.
+### Pattern 2b — Short sibling declarations may align after `(`
 
-### Pattern 2b — Proactive break-after-paren when sibling signatures share shape
-
-Sometimes a signature would fit on one line, but you still break it one-per-line because a nearby sibling signature does the same thing and you want both to read as a visual table.
-
-**Before:**
-
-```cpp
-void macroRecord(Scintilla::Message message, Scintilla::uptr_t w_param, Scintilla::sptr_t l_param);
-void marginClicked(Scintilla::Position position, Scintilla::KeyMod modifiers, int margin);
-```
-
-**After:**
-
-```cpp
-void macroRecord(
-    Scintilla::Message message,
-    Scintilla::uptr_t  w_param,
-    Scintilla::sptr_t  l_param);
-void marginClicked(Scintilla::Position position, Scintilla::KeyMod modifiers, int margin);
-```
-
-`macroRecord` wrapped because its three parameters all share the `Scintilla::Xxx` pattern, so aligning them as a column reveals a table (three rows of `TYPE name`). `marginClicked` stayed compact because its parameter types are heterogeneous (`Scintilla::Position`, `Scintilla::KeyMod`, `int`) — no table would emerge from wrapping it.
-
-**Pattern-matching alignment across related declarations.** When two or more function declarations share an *identical* argument signature, pad the shorter declaration so the identical argument lines up under the identical argument in the longer declaration.
-
-**Before:**
-
-```cpp
-void DragEnter(const Point& point);
-void DragMove(const Point& point);
-```
-
-**After:**
+Short sibling declarations with short parameter lists should usually stay on one line. When a small coherent family of such declarations benefits from it, pad after `(` so the parameter text begins in the same column across the group.
 
 ```cpp
 void DragEnter(const Point& point);
 void DragMove( const Point& point);
 ```
 
-The space after `DragMove(` is deliberate — `DragMove` is one character shorter than `DragEnter`, so the `const Point& point` argument in the second line would otherwise sit one column to the left of its twin in the first line. Padding the opening paren with a space makes the identical arguments stack perfectly under each other. Sibling declarations with *different* signatures (like a `DragLeave()` with no args, or a `Drop(...)` with more args nearby) are not part of the same alignment group.
+This also applies when the parameter types are not textually identical but are still comparable enough that the group reads as one local family:
 
-This is a niche rule but a strong one when it applies: the visual effect is that two closely-related functions with the same argument shape read as one grouped API rather than two unrelated signatures.
+```cpp
+void MousePress(  QMouseEvent* ev);
+void MouseMove(   QMouseEvent* ev);
+void MouseRelease(QMouseEvent* ev);
+void Wheel(       QWheelEvent* ev);
+```
+
+Use this only within a small coherent sibling group. Do not extend it mechanically across unrelated declarations just because they are nearby.
 
 ---
 
@@ -598,25 +578,39 @@ All three columns (label, assignment, `break;`) are aligned. Fall-through commen
 
 This is a specific pattern for test code where a `check()` (or similar) function takes a boolean condition, a fixture id, and a descriptive message.
 
-**Rule A — if it fits on one line, keep it compact:**
+**Compact form — if it fits on one line and reads cleanly, keep it compact:**
 
 ```cpp
 ok &= check(sel.rect.width() > 0, id, "selection rect width must be > 0");
 ```
 
-**Rule B — if the message alone makes the line exceed 120 columns, wrap after `id,`, not after `(`:**
+**Line split — if the message alone is what makes the call long, splitting after `id,` is often the best compact wrapped form:**
 
 ```cpp
 ok &= check(nearly_equal(ind.rect.bottom(), expected_bottom), id,
     "indicator rect bottom must stay within the indicator line");
 ```
 
-Never `check(\n cond, id, msg)` and never `check(cond, id,\n msg)` with a leading space. The wrap point is after `id,` and the message goes on its own continuation line at the usual continuation indent.
+This is especially effective in repetitive assertion blocks where the call shape stays the same and the message text is the main thing that varies.
 
-**Rule C — uniform wrap form within a coherent block:** when *any* `check()` call in a tight sequential block needs to wrap, apply the same wrap form to every `check()` call in that block, even the ones that would fit on a single line. Consistency across the block matters more than individual line compactness.
+**Block consistency is heuristic, not absolute.** If one long message appears inside a tight block of otherwise similar `check()` calls, both of these can be reasonable:
+
+1. Keep the short ones compact and split only the exceptional long line.
+2. Use the same line-split shape across the whole coherent block when that makes the block read more uniformly.
 
 ```cpp
-ok &= check(sel.is_main, id, "single-line selection must be marked as main");
+ok &= check(sel.main,            id, "selection must be main");
+ok &= check(sel.valid,           id, "selection must be valid");
+ok &= check(line != nullptr,     id, "selection must map to a line");
+ok &= check(line == active_line, id,
+    "selection must map to the currently active visual line in the test fixture");
+```
+
+and
+
+```cpp
+ok &= check(sel.is_main, id,
+    "single-line selection must be marked as main");
 ok &= check(sel.rect.width()  > 0, id,
     "selection rect width must be > 0");
 ok &= check(sel.rect.height() > 0, id,
@@ -631,13 +625,9 @@ ok &= check(nearly_equal(sel.rect.right(), expected_right), id,
     "selection rect right edge must match the selected text end");
 ```
 
-Only the last four checks in this block genuinely *needed* to wrap. The first three (`width`, `height`, `line != nullptr`) would fit on one line comfortably, but they were wrapped anyway so the whole block reads uniformly.
+The judgment call is what counts as one block and how exceptional the long line really is. If only one line is the exception, leaving only that line split is often fine. If several neighboring lines are close in shape and topic, using one compact wrapped shape across them can be better.
 
-The first line (`sel.is_main`) is the exception: it's visually separate (it's about a different property of the selection, and acts like a preamble), so it stays compact. The `width`/`height`/`line`/… group is a coherent sequence of property checks about the same selection rect, so it gets uniform treatment.
-
-The judgment call here is "what counts as one block." A reasonable rule of thumb: lines that have the same subject and the same kind of assertion are one block. Lines that switch subjects (from `sel.is_main` to `sel.rect.*`) start a new block.
-
-**Rule D — complex compound condition inside `check()` gets a deeply-indented subblock:**
+**Argument split — use it when the condition itself is long, structured, or intentionally varied enough that the reader should see its internal shape:**
 
 ```cpp
 ok &= check(
@@ -646,7 +636,7 @@ ok &= check(
     id, "multi-selection rects must sit on the same visual line");
 ```
 
-The `check(` opens, then the condition lines sit at **+8** indent (16 spaces from the function body), then `id, "msg"` returns to the normal **+4** continuation indent on its own trailing line. This is the only place where the condition is indented beyond the normal continuation level — the extra indent exists specifically to set the multi-line condition apart as a visual subordinate block under the `check(` call.
+Here the first argument is itself the structured block. In that case, opening after `(` is the right choice because it reveals the condition's own shape.
 
 Inside the condition, the two `sel.rect.top()` subexpressions are padded so `==` lines up with `nearly_equal(sel.rect.top(),`, making the two alternative formulations visually comparable.
 
@@ -821,24 +811,24 @@ points = make_rect_outline_as_lines(rect.adjusted(0.0, 0.0, -pixel, -pixel));
 
 ## Pattern 15 — The 120-column rule is a *diagnostic signal*, not a tolerance
 
-The main guide treats 120 columns as a hard ceiling. This addendum refines that: **when you see a line heading over 120 columns, your first response is not to wrap it — it is to ask why it got that long in the first place.** The ceiling is a symptom, not the problem.
+The main guide treats 120 columns as a strong limit, not as a formatting goal. This addendum pushes the decision point earlier: **once a line is much longer than its neighbors, or moves past roughly 100 columns, ask whether the current shape is still the clearest one.** Readability wins. The threshold is a signal, not the point of the style.
 
 The interrogation order is:
 
 1. **Verbose local names.** `physical_pixel_size_in_logical_units` inside a small function is almost certainly too long for what it carries. Rename locally: `const qreal pixel = physical_pixel_size(window);`. The rename shortens every subsequent use and often drops the line under 120 by itself.
 2. **Duplicated namespace qualifiers.** If `Scintilla::Internal::Something` appears three times in the same statement, a `using Item = ScintillaQuick_item;` or a `namespace sg = Scene_graph::Internal;` inside the function turns the duplication into a short alias.
 3. **Repeated call chains.** `obj->a()->b()->c()` used several times begs for a cached `const auto& x = obj->a()->b()->c();` at the top of the block.
-4. **Repeated wrapped expression.** If a `QColorFromColourRGBA(ColourRGBA(static_cast<int>(X)))`-style triple appears more than a handful of times across a translation unit, introduce a helper (see Pattern 14).
+4. **Formatting-pass scope.** Small local renames, aliases, or cached subexpressions are fair game when they obviously improve scanability. Broader helper extraction or API refactoring is a separate cleanup choice, not something a formatting pass must invent.
 
-Only *after* these refactors genuinely don't help — and the remaining long line reveals a table structure (like the `append_rect_triangles` example in Pattern 13) that would be lost at <120 cols — is a line longer than 120 acceptable. And even then, not *substantially* over; a few columns at most.
+If a line is the only conspicuously long line in a local block, splitting it is often right even when it is still below 120. If several nearby lines share the same strong structure and that structure reads best as a table, keeping one of them slightly over 120 can still be right.
 
-Treat ≥110 as a warning, ≥115 as "interrogate," and >120 as "something is wrong above the line-length level." A repo whose long lines cluster at 118–119 is a repo that keeps squeezing lines under the ceiling instead of interrogating them.
+Treat ~100 as "take a look," ~110 as "interrogate," and >120 as "justify with readability, not with habit."
 
 ---
 
 ## Pattern 16 — Preserve existing coherent structure when in doubt
 
-The main guide says: "Existing coherent formatting is evidence." This is the most important judgment rule in the whole addendum, because it is the one most likely to be violated by an LLM doing a mechanical pass.
+The main guide repeatedly treats existing coherent formatting as evidence. This is the most important judgment rule in the whole addendum, because it is the one most likely to be violated by an LLM doing a mechanical pass.
 
 If a block of code is already visually well-structured — it has intentional alignment, it has semantic grouping, it has a layout that makes scanning faster — the correct default is to **leave it alone**. Do not merge split lines just because the merged form still fits under 120. Do not de-align a coherent aligned block to "normalize whitespace." Do not expand compact one-line helpers into multi-line blocks because some formatter would prefer it that way.
 
