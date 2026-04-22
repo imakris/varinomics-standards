@@ -1,4 +1,4 @@
-# Varinomics Coding Style — LLM Addendum
+# Varinomics Coding Style - LLM Addendum
 
 ## Purpose and audience
 
@@ -22,9 +22,9 @@ The corollary: when a block **doesn't** have similar shape, forcing alignment ma
 
 ---
 
-## Pattern 1 — Aligned `=` in declaration and assignment groups
+## Pattern 1 - Aligned `=` in declaration and assignment groups
 
-When you see two or more consecutive `type name = value;` lines with broadly similar shape, pad the names (and if necessary the types) so every `=` lands in the same column. **Pairs count.** Do not wait for three identical shapes before aligning — a simple two-line pair like `m_v_max = ... ; m_v_page = ... ;` gets the same treatment.
+When you see two or more consecutive `type name = value;` lines with broadly similar shape, pad the names (and if necessary the types) so every `=` lands in the same column. **Pairs count.** Do not wait for three identical shapes before aligning - a simple two-line pair like `m_v_max = ... ; m_v_page = ... ;` gets the same treatment.
 
 **Before:**
 
@@ -59,9 +59,9 @@ m_current_row = -1;
 m_top_row     = 0;
 ```
 
-**Cross-type groups are fine**, and the decision of whether to align them is **not about gap size — it is about whether the lines form a single coherent operation.** If a block of 3–5 lines computes one thing together — read one value, derive another from it, derive a third from both — align them even if some lines end up with 10+ characters of padding between name and `=`. If the lines just happen to be neighbors but are unrelated (configure something, read a property, declare an unrelated helper), leave them at their natural width no matter how close the types are.
+**Cross-type groups are fine**, and the decision of whether to align them is **not about gap size - it is about whether the lines form a single coherent operation.** If a block of 3-5 lines computes one thing together - read one value, derive another from it, derive a third from both - align them even if some lines end up with 10+ characters of padding between name and `=`. If the lines just happen to be neighbors but are unrelated (configure something, read a property, declare an unrelated helper), leave them at their natural width no matter how close the types are.
 
-**Do align — coherent operation with large gap:**
+**Do align - coherent operation with large gap:**
 
 ```cpp
 const unsigned char uch       = text[i];
@@ -72,7 +72,7 @@ qreal x_position              = tl.cursorToX(ui + code_units);
 
 The four lines are one UTF-8 glyph-positioning calculation. `qreal` is 5 characters wide and `const unsigned char` is 19 characters wide, giving `x_position` 14 spaces of padding before the `=`. The alignment is still the right call because the *logical* unit is one block.
 
-**Do align — short, similar, different types:**
+**Do align - short, similar, different types:**
 
 ```cpp
 const int    selection_start = 7;
@@ -133,7 +133,7 @@ out.is_represented_text = run.is_represented_text;
 out.represented_as_blob = run.represented_as_blob;
 ```
 
-**Counter-example — don't force alignment across unrelated declarations, regardless of gap size:**
+**Counter-example - don't force alignment across unrelated declarations, regardless of gap size:**
 
 ```cpp
 // Don't do this:
@@ -142,11 +142,11 @@ const QStringList    selected_fixtures   = parser.values(fixture_option);
 const auto           should_run_fixture  = [&](const QString& name) { ... };
 ```
 
-These three declarations happen to be adjacent in the source, but they're three unrelated setup steps — resolving an output path, parsing a CLI flag, defining a filter predicate. They do not form one logical unit of computation, so aligning them produces a table that shows structure that isn't there. Leave them at their natural width.
+These three declarations happen to be adjacent in the source, but they're three unrelated setup steps - resolving an output path, parsing a CLI flag, defining a filter predicate. They do not form one logical unit of computation, so aligning them produces a table that shows structure that isn't there. Leave them at their natural width.
 
 The rule of thumb: ask "would I read these three lines as a single logical step, or as three separate things that happen to be near each other?" If it's three separate things, don't align them.
 
-### Pattern 1b — `=`, `+=`, and `-=` share one vertical rail
+### Pattern 1b - `=`, `+=`, and `-=` share one vertical rail
 
 When a block contains a mix of plain assignments and compound assignments (`+=`, `-=`, `*=`, `/=`), the `=` character in every one of them counts as the alignment anchor. Pad so all the `=` characters line up in the same column.
 
@@ -174,7 +174,7 @@ const XYPOSITION arc_height = rc.Height() - fillStroke.stroke.width;
 
 The `=` of the const declarations, and the `=` inside the `+=` and `-=` operators, all land in the same column. The block reads as one coherent geometry setup even though the line shapes vary.
 
-### Pattern 1c — Sign alignment on numeric literals
+### Pattern 1c - Sign alignment on numeric literals
 
 When an aligned group of initialisers contains a mix of negative and positive numeric literals, pad the positives with one leading space so the digits line up under the minus sign of the negatives.
 
@@ -196,9 +196,9 @@ int               m_top_row      =  0;
 
 After the `=`, the first *digit* of each value sits in the same column. `5` and `0` get one extra leading space so they line up under the `1` of `-1`. This applies to any group of aligned short numeric initialisers with mixed signs, not just member initialisers.
 
-### Pattern 1d — Pad type names inside `<>` brackets and function calls to align across rows
+### Pattern 1d - Pad type names inside `<>` brackets and function calls to align across rows
 
-When an aligned group of declarations has varying type parameters inside template-like constructs — `static_cast<T>`, `std::vector<T>`, `std::make_unique<T>`, etc. — pad the shorter type *inside the angle brackets* so the closing `>` lines up across rows. The same principle extends to padding arguments **inside** a function call on one row so they align with corresponding arguments in a sibling row that has more arguments.
+When an aligned group of declarations has varying type parameters inside template-like constructs - `static_cast<T>`, `std::vector<T>`, `std::make_unique<T>`, etc. - pad the shorter type *inside the angle brackets* so the closing `>` lines up across rows. The same principle extends to padding arguments **inside** a function call on one row so they align with corresponding arguments in a sibling row that has more arguments.
 
 **Before:**
 
@@ -218,7 +218,7 @@ const double expected_right  = static_cast<double>(send(SCI_POINTXFROMPOSITION, 
 
 Two alignments happen together here:
 
-1. **Inside the cast brackets:** `int` is padded with three trailing spaces → `int   ` so the `>` of `static_cast<int   >` aligns with the `>` of `static_cast<double>` below it. The `double` is left at its natural width because it is the longest type in the group.
+1. **Inside the cast brackets:** `int` is padded with three trailing spaces -> `int   ` so the `>` of `static_cast<int   >` aligns with the `>` of `static_cast<double>` below it. The `double` is left at its natural width because it is the longest type in the group.
 
 2. **Inside the inner `send(...)` call:** the top row's `send(SCI_LINEFROMPOSITION, selection_start)` has no middle `0,` argument, while the two rows below have one. The top row's comma after `SCI_LINEFROMPOSITION,` is padded with six spaces so its `selection_start` argument starts in the same column as the `selection_start` in the rows below (which sits after `, 0, `). The result is that `selection_start` stacks vertically across all three rows.
 
@@ -232,7 +232,7 @@ This pattern is what the earlier Pattern 1 rules call "coherent operation" align
 
 ---
 
-## Pattern 2 — Wrapped calls and declarations: choose line split or argument split
+## Pattern 2 - Wrapped calls and declarations: choose line split or argument split
 
 When a declaration, definition, or call no longer reads cleanly on one line, choose one of two deliberate shapes:
 
@@ -285,7 +285,7 @@ ok &= check(
 sync_text_nodes_by_key(window, m_text_group, m_text_nodes, frame.visual_lines, frame.text_rect);
 ```
 
-### Pattern 2b — Short sibling declarations may align after `(`
+### Pattern 2b - Short sibling declarations may align after `(`
 
 Short sibling declarations with short parameter lists should usually stay on one line. When a small coherent family of such declarations benefits from it, pad after `(` so the parameter text begins in the same column across the group.
 
@@ -307,7 +307,7 @@ Use this only within a small coherent sibling group. Do not extend it mechanical
 
 ---
 
-## Pattern 3 — Accessor-pair alignment
+## Pattern 3 - Accessor-pair alignment
 
 `.left()`/`.right()`, `.top()`/`.bottom()`, `.width()`/`.height()`, `.x()`/`.y()` appear constantly in geometry code. When two or more consecutive lines use such a pair, pad the shorter accessor with a single space so the operator or comma after it lines up with the longer accessor's.
 
@@ -361,7 +361,7 @@ return {
 
 ---
 
-## Pattern 4 — Binary expressions split at the top-level operator
+## Pattern 4 - Binary expressions split at the top-level operator
 
 When a single long wrapped line has a top-level binary operator (`-`, `+`, `*`, `/`, `&&`, `||`, `==`), split at that operator so both operands sit at the same indent. Inside each operand, apply accessor-pair alignment recursively.
 
@@ -392,7 +392,7 @@ const long long key =
 
 ---
 
-## Pattern 5 — Long boolean chains on separate lines with trailing operators
+## Pattern 5 - Long boolean chains on separate lines with trailing operators
 
 When an `&&` or `||` chain wraps, put each clause on its own line with the operator at the **end** of the line, and pad the clauses so the operators form a vertical rail.
 
@@ -417,7 +417,7 @@ const bool scroll_position_changed =
 
 Notice three things:
 
-1. The `const bool … =` sits alone on its own line; all the clauses are beneath it at the same indent.
+1. The `const bool ... =` sits alone on its own line; all the clauses are beneath it at the same indent.
 2. Operators (`<`, `!=`) within each clause have been padded so they form a vertical column where the clauses share shape.
 3. The trailing `||`s form a rail at the end of each line.
 
@@ -434,7 +434,7 @@ return
 
 ---
 
-## Pattern 6 — Wrapped `if` conditions with brace on next line
+## Pattern 6 - Wrapped `if` conditions with brace on next line
 
 When an `if`, `for`, or `while` condition wraps across lines, put the opening brace on its own next line. This is an explicit visual cue that the condition itself is multi-line.
 
@@ -460,7 +460,7 @@ if (caret.rect.bottom() > vl.clip_rect.top() - 1.0 &&
 
 ---
 
-## Pattern 7 — Stream chains: `<<` at the start of continuation lines
+## Pattern 7 - Stream chains: `<<` at the start of continuation lines
 
 When a `<<` chain wraps, move `<<` to the **start** of the continuation lines and indent consistently. Never leave a dangling `<<` at the end of one line and another `<<` at the start of the next.
 
@@ -483,7 +483,7 @@ qWarning().noquote()
 
 ---
 
-## Pattern 8 — Wrapped ternaries as structured subordinate blocks
+## Pattern 8 - Wrapped ternaries as structured subordinate blocks
 
 When a ternary wraps, make the `?` and `:` structure visually clear. The condition sits alone on its own line, and each branch is an indented continuation. Don't flatten the ternary back onto one line just because it would fit.
 
@@ -517,7 +517,7 @@ Each condition sits on its own line with the `:` separating it from the next con
 
 ---
 
-## Pattern 9 — Compact pure-dispatch switches
+## Pattern 9 - Compact pure-dispatch switches
 
 When every arm of a `switch` is a short single-statement dispatch (a direct `return` or an assignment-plus-`break` pair that fits cleanly), collapse each arm to one line and align the columns. The compact form must be preserved across an auto-formatter pass if your tooling tries to expand it.
 
@@ -574,17 +574,17 @@ All three columns (label, assignment, `break;`) are aligned. Fall-through commen
 
 ---
 
-## Pattern 10 — Test-harness `check(cond, id, msg)` wrap rules
+## Pattern 10 - Test-harness `check(cond, id, msg)` wrap rules
 
 This is a specific pattern for test code where a `check()` (or similar) function takes a boolean condition, a fixture id, and a descriptive message.
 
-**Compact form — if it fits on one line and reads cleanly, keep it compact:**
+**Compact form - if it fits on one line and reads cleanly, keep it compact:**
 
 ```cpp
 ok &= check(sel.rect.width() > 0, id, "selection rect width must be > 0");
 ```
 
-**Line split — if the message alone is what makes the call long, splitting after `id,` is often the best compact wrapped form:**
+**Line split - if the message alone is what makes the call long, splitting after `id,` is often the best compact wrapped form:**
 
 ```cpp
 ok &= check(nearly_equal(ind.rect.bottom(), expected_bottom), id,
@@ -627,7 +627,7 @@ ok &= check(nearly_equal(sel.rect.right(), expected_right), id,
 
 The judgment call is what counts as one block and how exceptional the long line really is. If only one line is the exception, leaving only that line split is often fine. If several neighboring lines are close in shape and topic, using one compact wrapped shape across them can be better.
 
-**Argument split — use it when the condition itself is long, structured, or intentionally varied enough that the reader should see its internal shape:**
+**Argument split - use it when the condition itself is long, structured, or intentionally varied enough that the reader should see its internal shape:**
 
 ```cpp
 ok &= check(
@@ -642,7 +642,7 @@ Inside the condition, the two `sel.rect.top()` subexpressions are padded so `==`
 
 ---
 
-## Pattern 11 — Struct initializer arrays / dispatch tables
+## Pattern 11 - Struct initializer arrays / dispatch tables
 
 When you have a `{label, value}` initializer list with many rows (a test fixture table, a dispatch array, a keyword map), pad the first column so the second column starts in the same place. Add blank lines between semantic groups.
 
@@ -677,11 +677,11 @@ fixtures[] = {
 Two details worth noting:
 
 1. The closing `}` of the anonymous struct is on its own line, separated from the variable name `fixtures[] = {`. Writing `} fixtures[] = {` in one line is allowed in smaller tables but splits cleanly when the table is large.
-2. A blank line separates each semantic group, with a one-line `// Phase N: …` comment labelling each.
+2. A blank line separates each semantic group, with a one-line `// Phase N: ...` comment labelling each.
 
 ---
 
-## Pattern 12 — Consecutive similar API calls get their arg columns aligned
+## Pattern 12 - Consecutive similar API calls get their arg columns aligned
 
 When you see several consecutive calls to the same function with different first arguments (very common in test-setup code that configures an editor or state machine), pad the first argument so the second argument column starts in the same place.
 
@@ -705,13 +705,13 @@ f.editor.send(SCI_SETINDICATORCURRENT, 1);
 f.editor.send(SCI_INDICATORFILLRANGE,  4, 6); // "around"
 ```
 
-Five lines with a shared shape (`send(SCI_FOO, …)`), so the constant name becomes column 1 of a table and the remaining arguments sit in column 2.
+Five lines with a shared shape (`send(SCI_FOO, ...)`), so the constant name becomes column 1 of a table and the remaining arguments sit in column 2.
 
 ---
 
-## Pattern 13 — Nested point/rect constructor tables
+## Pattern 13 - Nested point/rect constructor tables
 
-When an initializer list or function call contains several structurally-identical nested constructors (like `QPointF(…)` or `QRectF(…)` rows inside a list), align the columns of those nested constructors. Pad shorter member-access expressions with a single space to match longer ones.
+When an initializer list or function call contains several structurally-identical nested constructors (like `QPointF(...)` or `QRectF(...)` rows inside a list), align the columns of those nested constructors. Pad shorter member-access expressions with a single space to match longer ones.
 
 **Before:**
 
@@ -739,11 +739,11 @@ points.insert(
 
 Three things happen:
 
-1. The outer `.insert(…)` call is broken after `(` with one argument per line, since it now contains a multi-line initializer list.
-2. Inside each `QPointF(…)` row, the first argument column is padded so the comma after the first argument lines up across all four rows.
+1. The outer `.insert(...)` call is broken after `(` with one argument per line, since it now contains a multi-line initializer list.
+2. Inside each `QPointF(...)` row, the first argument column is padded so the comma after the first argument lines up across all four rows.
 3. The rows themselves form a readable 4-row table even though the first column has different shapes (`cx - arm`, `cx + arm`, `cx`, `cx`).
 
-Another example — a four-row `append_rect_triangles` call:
+Another example - a four-row `append_rect_triangles` call:
 
 ```cpp
 append_rect_triangles(triangles, QRectF(box.left(),          box.top(),            box.width(), pixel));
@@ -752,15 +752,15 @@ append_rect_triangles(triangles, QRectF(box.left(),          box.top(),         
 append_rect_triangles(triangles, QRectF(box.right() - pixel, box.top(),            pixel,       box.height()));
 ```
 
-Each `QRectF(…)` row has its four arguments padded so the commas form four columns. The different first-argument shapes (`box.left()` vs `box.right() - pixel`) are padded to the same width so the second column lines up.
+Each `QRectF(...)` row has its four arguments padded so the commas form four columns. The different first-argument shapes (`box.left()` vs `box.right() - pixel`) are padded to the same width so the second column lines up.
 
 **Note:** this table exceeds the normal 120-column ceiling. It is accepted because the alignment reveals a clear 4-column table of rectangle coordinates that would be lost at 120 cols. See Pattern 15 for the rules on when >120 is acceptable.
 
 ---
 
-## Pattern 14 — Repetitive helper call extraction
+## Pattern 14 - Repetitive helper call extraction
 
-When the same complex wrapped expression appears several times in a row, introduce a short local alias or helper. This is not strictly a formatting rule — it is a readability refactor that often follows naturally from the "interrogate long lines" rule in Pattern 15, but it applies even when no single line is over the limit.
+When the same complex wrapped expression appears several times in a row, introduce a short local alias or helper. This is not strictly a formatting rule - it is a readability refactor that often follows naturally from the "interrogate long lines" rule in Pattern 15, but it applies even when no single line is over the limit.
 
 **Before:**
 
@@ -770,7 +770,7 @@ cached_attributes.background = QColorFromColourRGBA(ColourRGBA(static_cast<int>(
 cached_attributes.selected   = QColorFromColourRGBA(ColourRGBA(static_cast<int>(style.selected_rgba)));
 ```
 
-**After** — introduce a tiny helper in the anonymous namespace at the top of the file:
+**After** - introduce a tiny helper in the anonymous namespace at the top of the file:
 
 ```cpp
 // Convert a raw Scintilla capture rgba value to a QColor. Wraps the
@@ -809,7 +809,7 @@ points = make_rect_outline_as_lines(rect.adjusted(0.0, 0.0, -pixel, -pixel));
 
 ---
 
-## Pattern 15 — The 120-column rule is a *diagnostic signal*, not a tolerance
+## Pattern 15 - The 120-column rule is a *diagnostic signal*, not a tolerance
 
 The main guide treats 120 columns as a strong limit, not as a formatting goal. This addendum pushes the decision point earlier: **once a line is much longer than its neighbors, or moves past roughly 100 columns, ask whether the current shape is still the clearest one.** Readability wins. The threshold is a signal, not the point of the style.
 
@@ -826,17 +826,17 @@ Treat ~100 as "take a look," ~110 as "interrogate," and >120 as "justify with re
 
 ---
 
-## Pattern 16 — Preserve existing coherent structure when in doubt
+## Pattern 16 - Preserve existing coherent structure when in doubt
 
 The main guide repeatedly treats existing coherent formatting as evidence. This is the most important judgment rule in the whole addendum, because it is the one most likely to be violated by an LLM doing a mechanical pass.
 
-If a block of code is already visually well-structured — it has intentional alignment, it has semantic grouping, it has a layout that makes scanning faster — the correct default is to **leave it alone**. Do not merge split lines just because the merged form still fits under 120. Do not de-align a coherent aligned block to "normalize whitespace." Do not expand compact one-line helpers into multi-line blocks because some formatter would prefer it that way.
+If a block of code is already visually well-structured - it has intentional alignment, it has semantic grouping, it has a layout that makes scanning faster - the correct default is to **leave it alone**. Do not merge split lines just because the merged form still fits under 120. Do not de-align a coherent aligned block to "normalize whitespace." Do not expand compact one-line helpers into multi-line blocks because some formatter would prefer it that way.
 
 The positive statement: a pass over a file that leaves most of it unchanged is a *successful* pass. Finding "nothing to do" in a given block is a valid outcome. Drift toward mechanical uniformity is a failure mode.
 
 ---
 
-## Pattern 17 — Constructor initializer list with `:` on its own line
+## Pattern 17 - Constructor initializer list with `:` on its own line
 
 The main style guide already requires that constructor initializer list colons go on their own line for multi-member inits. This addendum clarifies: **the same form is used even for single-member initializer lists.**
 
@@ -886,7 +886,7 @@ Example(
 
 ---
 
-## Pattern 18 — Multi-literal string arguments break after the opening `(`
+## Pattern 18 - Multi-literal string arguments break after the opening `(`
 
 When the only argument to a function (typically `QStringLiteral`, `qDebug`, `qWarning`, `std::format`, `qFatal`) is two or more adjacent C++ string literals that together describe a single long message, break the call after the opening `(` and put each literal on its own continuation line. Chained `.arg(...)` calls (or other trailing method calls) follow at the natural continuation indent.
 
@@ -911,9 +911,9 @@ lines << QStringLiteral(
         .arg((i * 13) % 101);
 ```
 
-The literals are at the normal continuation indent under the opening `(`, and the `.arg(...)` chain is at +4 below that. The ugly "hanging indent under text from the first line" form (where later literals are lined up under `"Wrapped line %1…"`) is not allowed.
+The literals are at the normal continuation indent under the opening `(`, and the `.arg(...)` chain is at +4 below that. The ugly "hanging indent under text from the first line" form (where later literals are lined up under `"Wrapped line %1..."`) is not allowed.
 
-**Counter-example — if the two literals fit comfortably on one line as the joined form, prefer the joined form:**
+**Counter-example - if the two literals fit comfortably on one line as the joined form, prefer the joined form:**
 
 ```cpp
 // Original:
@@ -935,7 +935,7 @@ Multi-literal concatenation exists to keep a long string under the column limit.
 For LLMs performing a style pass:
 
 1. Read the main guide first. The rules there always win.
-2. When you encounter a block with 2+ lines of similar shape, check whether the patterns in this document apply. If they do, apply them. The decision is about whether the lines form a single coherent operation, not about gap size — a 14-character gap is acceptable when the logical unit is clear.
+2. When you encounter a block with 2+ lines of similar shape, check whether the patterns in this document apply. If they do, apply them. The decision is about whether the lines form a single coherent operation, not about gap size - a 14-character gap is acceptable when the logical unit is clear.
 3. When you encounter a line over ~110 cols, go through the Pattern 15 interrogation sequence before wrapping.
 4. When making a wrap decision inside a `check()` or similar assertion block, look at the *neighbors* in the same block. If they had to wrap, wrap uniformly. If they're all compact, stay compact.
 5. Do not confuse "finished" with "edited every line." Most of every file should stay unchanged on most passes.
@@ -943,4 +943,4 @@ For LLMs performing a style pass:
 For humans reading the output of such a pass:
 
 - Each edit should either match one of the patterns above, or reduce to one of the rules in the main guide, or be a semantic refactor (rename / cache / helper / alias) whose effect is obvious.
-- If you see a diff that doesn't fit any of those categories, that's either a pattern this addendum should learn or a mistake — in either case, worth discussing.
+- If you see a diff that doesn't fit any of those categories, that's either a pattern this addendum should learn or a mistake - in either case, worth discussing.
