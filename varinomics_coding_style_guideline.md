@@ -90,13 +90,26 @@ profiles.
 - Comments must explain intent, constraints, or non-obvious behavior.
 - Comments must not restate code that is already obvious from the implementation.
 - Public interfaces and non-trivial internals should have concise documentation.
-- Examples in docs and tests should use realistic values and names.
+- Examples in docs, tests, comments, and documentation snippets must use
+  realistic, context-appropriate values and names.
+- Do not use `42` as a generic example value, placeholder, filler constant, or
+  joke. It is tired, unserious, and unacceptable in product-owned material
+  unless the subject matter literally requires that value.
+- Do not use meme values, wink/nod references, or joke placeholders when a real
+  domain value would communicate the example better.
+- Do not describe product-owned code or behavior as `v1`, `v2`, `legacy`,
+  `old`, or similar in comments, docs, or user-facing messages unless that
+  label names a real external contract, protocol version, or release boundary.
 
 ### 3.7 Tooling and enforcement
 
 - Use automated formatting and linting where available, but tool output does not
   override this guideline.
 - If a formatter cannot express a rule in this document, follow the document.
+- Do not leave pure LF/CRLF line-ending churn in a change set.
+- If a file differs only by line-ending normalization and no real content has
+  changed, revert that noise immediately.
+- Do not present line-ending-only diffs as meaningful work.
 
 ## 4. Language-Specific Profiles
 
@@ -763,6 +776,17 @@ enum class Display_style
 
 - Use assertions for invariants and programmer errors.
 - Use structured logging for non-fatal diagnostics.
+- Choose log levels deliberately and consistently.
+- `error` means a real failure state. It is potentially fatal and may require
+  user action.
+- `warning` means something is wrong, but the program can continue, possibly in
+  a degraded or risky state.
+- `info` means useful user-facing events or status updates.
+- `external` means user-facing output originating from third-party tools or
+  processes.
+- `debug` means developer-facing diagnostics and troubleshooting detail.
+- `error`, `warning`, `info`, and `external` are user-facing levels and their
+  messages must be clear, well-formed, and non-cryptic.
 - Avoid noisy logging in hot paths.
 - Exception-based and status-return-based error handling are both acceptable; each
   module should choose deliberately and remain internally consistent.
