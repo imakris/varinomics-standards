@@ -930,6 +930,79 @@ Multi-literal concatenation exists to keep a long string under the column limit.
 
 ---
 
+## Pattern 19 - Comments: when to add, when to keep, when to remove
+
+This document and the main guide both say "explain intent, not mechanics" - often paraphrased as "WHY over WHAT." The paraphrase is right in the common case but has been over-applied in automated passes, leading to real information being deleted. The rules below refine it so that comments carrying actual weight do not get pruned.
+
+### 19.1 When a comment is added, it must explain rationale
+
+Every new comment must say *why* the surrounding code looks the way it does, not only *what* it does. A comment that only restates the code does not pass review and should not have been added in the first place. This is not a change from prior guidance; it is the rule that gets us into trouble in every other subsection below, so it is stated explicitly first.
+
+**Unacceptable:**
+
+```cpp
+i += 1;  // increment i
+slot->flags = effective_flags;  // assign effective_flags to slot->flags
+```
+
+**Acceptable:**
+
+```cpp
+// Slot table is indexed from 1 - entry 0 is reserved for the sentinel.
+++i;
+
+// effective_flags may differ from the caller's flags because the overflow
+// path forces k_present_flag_full_redraw so no dirty region is lost.
+slot->flags = effective_flags;
+```
+
+### 19.2 Do not remove a WHAT-comment without first making the thing comprehensible
+
+If a comment exists because the code it describes is hard to read on its own, removing the comment without also fixing the underlying unclarity is strictly worse than leaving the comment in place. The comment is load-bearing documentation until the code is made self-describing.
+
+Concretely:
+
+- If the comment explains a **variable** whose name is weak, rename the variable *before* deleting the comment. Deleting the comment and leaving the weak name forces the next reader to reconstruct the information from scratch.
+- If the comment explains a **section of logic** whose structure is opaque, refactor the logic (rename, extract helper, reorder) *before* deleting the comment.
+- If neither of those is in scope for the current change, keep the comment.
+
+The test: after removing the comment, does the code convey the same information to a first-time reader? If not, the comment stays.
+
+**Anti-pattern to avoid:** reasoning "if a variable needs a comment to explain what it is, that's a hint the name is weak, so I will delete the comment" - and then not renaming the variable. That trade is strictly negative. The reader loses the information and gains nothing; the weak name is still there.
+
+### 19.3 WHAT + WHY comments are WHY comments
+
+A comment that includes WHAT details as part of a WHY explanation is a WHY comment, not a WHAT comment. Some rationale is incomprehensible without a pointer to the thing being rationalized. The WHAT fragment is load-bearing for the WHY and cannot be stripped.
+
+**Example - the WHAT is part of the WHY:**
+
+```cpp
+// QSaveFile triggers a spurious watcher event on some network filesystems;
+// latch the flag so the first fileChanged() inside the save window is
+// recognised as our own write and not surfaced as an external change.
+m_pending_post_save_file_change = true;
+```
+
+The opening clause ("QSaveFile triggers...") looks like a WHAT. It is not - without it, "latch the flag so the first fileChanged() ..." has no anchor. Strip the opening clause and the remaining comment is nonsense. Treat the whole block as a WHY comment and leave it intact.
+
+### 19.4 Comments may be defensive shields against review that keeps flagging correct code
+
+Sometimes a comment exists because review passes - human or automated - keep flagging correct code as a bug. The comment is there to short-circuit the loop. Treat such comments as load-bearing: removing them re-opens the loop and wastes the next reviewer's time.
+
+Signals that a comment is playing this role:
+
+- Explicit framing: `// this is deliberate`, `// not a dead branch`, `// intentional fallback`, `// yes, this empty else is intentional`, `// do not replace with X - see commit <hash>`.
+- The surrounding code looks slightly odd at a glance but has a good reason.
+- The comment sits on a line that is the first thing a reviewer would flag.
+
+Do not remove these to satisfy a "WHY-only" pass - the defensive framing *is* a WHY, phrased in response to the expected misreading. When they are kept, it is fine to rewrite them in the positive voice (leading with the reason rather than denying the suspected bug), but only when the rewritten version genuinely covers the same ground. When in doubt, keep the original.
+
+### 19.5 The summary rule
+
+Default to writing no comment. When you do write one, explain the reason. When you find an existing comment, assume it is there because someone who understood the code better than you thought it was worth writing, and remove it only after you have either (a) made the code self-describing, or (b) proven that the information in the comment is genuinely redundant. *"Redundant with the variable name"* is not the same as *"redundant"*, unless you have also fixed the variable name.
+
+---
+
 ## How to use this addendum
 
 For LLMs performing a style pass:
