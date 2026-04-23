@@ -2,93 +2,87 @@
 
 This document governs what reviewers - human or LLM - must *not* flag when reviewing Varinomics code. It applies in addition to the coding-style documents; the coding-style docs govern what you *write*, this document governs what you *critique*.
 
+## The rule is narrow on purpose
+
+This rule applies to **elective features** - things a project chooses to do or not to do. i18n, accessibility, cross-platform portability beyond the declared target, specific architectural patterns, specific feature completeness. A project adopts these, or it doesn't; a reviewer must check which before flagging absence.
+
+The rule does **not** apply to baseline software quality. Correctness, data integrity, security hygiene, performance sanity, resource hygiene, maintainability - every project is implicitly committed to these. A reviewer never has to "check if the project signed up for correctness." Baseline-quality findings are always in scope.
+
+This distinction matters because conflating the two is dangerous. Telling a reviewer not to flag security concerns because "the project hasn't adopted security as a requirement" would be catastrophic - especially for products like financial software, where security is foundational to the domain. The rule below is about features, not about quality.
+
 ## The governing rule
 
-**Review against the project that exists, not against a project the reviewer imagines it could become.**
+**For elective features, review against the project that exists - not against a project the reviewer imagines it could become.**
 
-A project is defined by what it has committed to - its stated goals, its observable conventions, and its committed constraints. Reviewers draw on broad experience and know many things a project *could* be doing: supporting more platforms, shipping in more languages, being more accessible, scaling to more users, hardening against more attacks, emitting more telemetry, conforming to more audit standards, following more architectural patterns. That knowledge is useful - but only when the project has chosen to value the thing.
+A project's elective commitments come from the project: its stated goals, its observable conventions, and its committed constraints. Reviewers know many electives a project *could* be doing - supporting more platforms, shipping in more languages, adopting particular architectural patterns, conforming to particular compliance regimes. That knowledge is useful when the project has chosen to value the thing. When it hasn't, applying the knowledge as a criticism is miscalibration - the reviewer has substituted an imagined project for the real one.
 
-When a reviewer flags the absence of something the project has not adopted, the reviewer has substituted an imagined project for the real one. That is advocacy, not review. Advocacy is a legitimate activity; it just does not belong in a code-review report.
+When a reviewer flags the absence of an elective feature the project has not adopted, the reviewer is doing advocacy, not review. Advocacy is a legitimate activity; it just belongs in a product discussion, not in a code-review report.
 
-## Why this matters
+## Baseline vs elective
 
-Review bandwidth is finite, and noise displaces signal. A report that mixes real issues with findings based on imagined requirements trains the reader to ignore the report, which in turn buries the real issues. A reviewer who files out-of-scope findings is not being thorough - they are being *miscalibrated*. Thorough means reporting every issue that matters to *this* project. Miscalibrated means reporting issues that would matter to *some other* project.
+A finding falls into one of two categories, and they are treated differently:
 
-## What counts as evidence of scope
+### Baseline quality - always in scope
 
-A concern is in scope when the evidence supports it:
+These are not adopted; they are assumed. Every project is committed to them by default:
+
+- **Correctness.** The code does what it claims to do. Matches its documentation, matches its tests, matches its interface.
+- **Data integrity.** No lost writes, no silent corruption, no torn updates under expected workloads.
+- **Security hygiene.** No obvious exploits, no SQL injection, no hardcoded secrets, no unvalidated untrusted input, no credentials in logs. The *specific* threat model is domain-dependent (see below), but the baseline of "no obvious bugs that an attacker can walk through" is never opt-out.
+- **Performance sanity.** No O(n²) where O(n) is trivial, no UI-thread blocking for seconds, no unbounded memory growth, no leaking resources. The *specific* performance targets are project-dependent, but "egregiously slow / wasteful" is never acceptable.
+- **Resource hygiene.** Files closed, handles freed, threads joined, sockets shut down, locks released.
+- **Maintainability baseline.** A new reader can understand the code in reasonable time. Names mean what they say. Structure is not actively hostile.
+
+A reviewer flagging any of these has not overstepped scope. They may be wrong (the suspected bug may not exist), but the category is legitimate.
+
+### Elective features - in scope only when adopted
+
+These are choices a project makes. A reviewer must check whether the project has adopted them before flagging their absence:
+
+- **Internationalization.** Shipping in multiple languages, translation workflow, locale-aware formatting.
+- **Accessibility.** Screen-reader support, keyboard-only navigation, high-contrast modes, `Accessible.*` properties. *(See "Domain sets the baseline" below - a11y may be a legal baseline for some product categories.)*
+- **Cross-platform portability beyond the declared target.** If the project targets Windows x86_64, "this would break on Linux" and "this would break on ARM" are not findings.
+- **Specific architectural patterns.** Dependency injection, hexagonal architecture, plugin models, event sourcing. In scope when the project uses them; out of scope when it doesn't.
+- **Specific compliance regimes.** FIPS, SOC2, PCI-DSS, GDPR-specific features. In scope when the project has adopted them; out of scope when the domain doesn't require them.
+- **API / ABI stability.** Backwards compatibility obligations. In scope when external consumers exist; out of scope when the project's own `AGENTS.md` rules them out (e.g. pre-launch).
+- **Feature completeness.** Cancel buttons, dark mode, undo history, configurability. In scope when part of the design; out of scope when the reviewer just thinks they'd be nice.
+
+## Domain sets the baseline
+
+The baseline is not universal - it rises with the project's domain. A CLI utility's baseline is "doesn't crash, handles common inputs, doesn't leak memory." A banking product's baseline is the utility baseline *plus* adversarial-user threat modeling, audit trails, financial-precision arithmetic, and regulatory compliance appropriate to the jurisdiction. A government-facing service's baseline may include accessibility by law.
+
+Galanthus does not need to "adopt" banking-level security for banking-level security concerns to be in scope. The domain implies it. Similarly, a health-data product does not need to "adopt" HIPAA-equivalent handling for such handling to be baseline - the domain implies it.
+
+The practical test: would a reasonable operator of software in this domain consider the behavior acceptable? If the answer is clearly no, the finding is baseline and in scope, regardless of whether the repo's docs mention it. If the answer is yes, and the concern is about a feature the project could reasonably choose not to provide, the finding is elective and requires adoption to be in scope.
+
+## What counts as evidence that an elective feature is adopted
 
 - **Explicit statements** in `CLAUDE.md`, `AGENTS.md`, `README`, architecture docs, or the user's direct instructions.
 - **Conventions used consistently** across the code. A pattern applied in three or more places is evidence of commitment; a pattern applied once is not.
-- **Build, deployment, and CI configuration.** A CI matrix with multiple OS targets implies cross-platform scope. A `.ts` file implies i18n. A fuzz-testing target implies fuzz testing is in scope. A performance-regression CI job implies performance is in scope.
-- **Absence over a wide area.** If no file in a large codebase uses feature X, feature X is not in the project's ambition. Silence is evidence.
+- **Build, deployment, and CI configuration.** A CI matrix with multiple OS targets implies cross-platform scope. A `.ts` file implies i18n. A fuzz-testing target implies fuzz testing is in scope.
+- **Absence over a wide area.** If no file in a large codebase uses feature X, feature X is not in the project's ambition.
 
-## What does **not** count as evidence of scope
+## What does not count
 
 - **What the reviewer would do on a greenfield project.** The project is not greenfield and is not the reviewer's.
-- **What industry "best practice" says for category Y of software.** Best practices are general; projects are specific. A best practice becomes a requirement for *this* project only when *this* project has adopted it.
-- **A single stray instance.** A leftover `tr()` call from a scaffolding experiment is not evidence that i18n is in scope. One `Accessible.name` on one button is not evidence that accessibility is in scope. Isolated code does not establish a commitment.
-- **What would "also" be good.** Many true statements are not findings. "This would also work in dark mode" is not a finding unless dark mode is in scope.
-
-## Common categories where the rule applies
-
-The rule above is the whole rule; the list below is illustrative, not exhaustive. When a reviewer encounters any of these dimensions, the first move is to check the project's actual commitment.
-
-### Platform and architecture
-
-Cross-platform portability is in scope when the project actually targets multiple platforms: cross-platform CI, abstraction layers used consistently, explicit porting goals in the docs. A Qt project deployed only to Windows, using `#ifdef Q_OS_WIN` and Win32 APIs directly, is a Windows project - treat it as one. A single `_mm_*` intrinsic in a Windows x86_64 target is not an ARM-portability bug. "This would break on Linux" is not a finding when Linux is not a target.
-
-### Internationalization
-
-i18n is in scope when the application ships in multiple languages: `.ts` files present and maintained, `qsTr()` / `tr()` used consistently across the UI, translation workflow in docs or CI, multiple locales declared in deployment. Absent that evidence, bare string literals are not a finding. A single stray `tr()` call is not evidence - the question is whether the app *actually* ships in multiple languages.
-
-### Accessibility
-
-Accessibility is in scope when the project states it as a requirement, or uses `Accessible.*` properties, keyboard-navigation affordances, and screen-reader hooks consistently across existing UI. A project that does not currently support accessibility has not made an error - it has made a product decision with real implementation cost. If you believe accessibility *ought* to be a requirement, raise it as a product question, not a review finding.
-
-### Performance and scale
-
-Performance concerns are in scope when the project has performance goals: latency SLOs, memory budgets, throughput targets, performance CI. "This allocation could be avoided" is a finding only when allocation cost matters in this code path, in this project. Micro-optimizations in a tool that runs once at startup and exits are not findings.
-
-### Security and threat modeling
-
-Security findings must name the threat they mitigate, and the threat must be in scope. "This is not constant-time" is a finding only when timing attacks are part of the threat model. "This doesn't sanitize X" is a finding only when X is a reachable untrusted input. A threat that the project has not accepted as in-scope is not grounds for a finding.
-
-### Testing depth
-
-Coverage expectations follow the project's own conventions. A project with unit tests for public APIs is not under-tested because it lacks fuzz harnesses, property-based tests, or mutation testing - unless those are stated goals. "This function has no test" is a finding against the project's own testing practice, not against a hypothetical 100%-coverage norm.
-
-### Operational concerns
-
-Logging, metrics, tracing, and alerting requirements vary by product. A command-line tool that prints and exits is not under-instrumented. A daemon running in production without tracing might be - but only if the project has committed to operational observability. Flag the gap only when the gap is real for *this* deployment.
-
-### Architectural patterns
-
-Dependency injection, hexagonal architecture, plugin models, event sourcing, clean-architecture layering, and so on are in scope when the project uses them. Flagging the absence of a pattern the project has not adopted is advocacy. "This should be an interface" is a finding only when interfaces are the project's idiom for this kind of thing.
-
-### API and ABI stability
-
-Backwards compatibility is in scope when external consumers exist. In a pre-launch repository where the project's `AGENTS.md` explicitly rules out compatibility obligations, "this breaks the API" is not a finding - the project has said it does not have an API in the stable sense yet. Reviewer-invented "users" do not establish compatibility obligations.
-
-### Feature completeness
-
-"This dialog lacks a Cancel button" is a finding only when Cancel was part of the design. "This error message could be friendlier" is a finding only when error-message polish is something the project has invested in elsewhere. Absence of a feature the reviewer thinks would be nice is not the same as absence of a feature the project committed to.
+- **General best practice for "category Y of software."** Best practices are useful inputs to product decisions, not automatic requirements.
+- **A single stray instance.** A leftover `tr()` call from a scaffolding experiment is not evidence that i18n is in scope. One `Accessible.name` on one button is not evidence that a11y is in scope. Isolated code does not establish a commitment.
+- **What would "also" be good.** "This would also work in dark mode" is not a finding unless dark mode is in scope.
 
 ## When the target is unclear
 
-If the project's scope on any dimension isn't obvious from the evidence:
+If a concern might be elective *or* baseline, err toward baseline when the consequence of the bug is harm (data loss, exploit, user-visible breakage), and toward elective when the consequence is merely "feature missing." When in doubt:
 
-1. Read the project's own governance files (`CLAUDE.md`, `AGENTS.md`, `README`).
-2. Read the code: what is actually, consistently used?
-3. If still unclear, **ask the user** what's in scope before writing the report. Do not fill the report with hypothetical findings based on guessed scope.
+1. Read `CLAUDE.md`, `AGENTS.md`, `README`, and any architecture docs.
+2. Look at what the code consistently uses.
+3. Consider the product domain. Banking ≠ CLI utility ≠ game ≠ government service - baselines differ.
+4. If still unclear, **ask the user** what's in scope before writing the report.
 
 ## Summary
 
-Review findings fall into two buckets:
+Two buckets:
 
-- **In scope.** The project has committed to X, either by explicit statement or by the consistent evidence of its code. A finding that X is missing, broken, or weaker than the project's commitment is valid.
-- **Out of scope.** The reviewer believes X *would be* nice, useful, defensive, modern, safer, or more consistent with some other project's conventions - but the project itself has not committed to X. This is not a finding. It is advocacy, and it belongs in a product discussion, not in a review report.
+- **Baseline quality** (correctness, data integrity, security hygiene, performance sanity, resource hygiene, maintainability). Always in scope. Domain raises the baseline, never lowers it. A reviewer does not need to check whether the project "adopted" correctness.
+- **Elective features** (i18n, a11y where not legally baseline, cross-platform beyond target, specific architectural patterns, specific compliance regimes, feature completeness). In scope only when adopted, by explicit statement or consistent convention. Advocacy for un-adopted electives belongs in a product discussion, not in a review.
 
-Out-of-scope findings are not "nice-to-haves." They are noise that displaces signal. The test a finding must pass to belong in a review is not "is this a good idea in general?" but "is this a gap against what *this* project has adopted?"
-
-If the answer to that second question is no, the reviewer has written a product proposal, not a review. Send it up the right channel; keep it out of the review report.
+The failure mode the rule guards against is the reviewer imposing an elective that the project has chosen not to take on. It does not, and must not, protect bugs or vulnerabilities - those are baseline concerns regardless of what any document says.
