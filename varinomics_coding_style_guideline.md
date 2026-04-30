@@ -825,7 +825,130 @@ void flush_rects_buffer(const glm::mat4& pmv);
 - Do not churn cast style, sentinel values, or null style without a concrete gain in
   correctness, safety, clarity, or consistency within the module.
 
-## 6. Review Checklist
+## 6. C and C-Style API Profile
+
+This section defines the default style for designing C-callable APIs and any
+C-style API surface, including ABI-stable headers that ship to external
+consumers and shared-object exports. It applies whether the implementation
+language is C or C++.
+
+The rules below are about API *design*. Section 5.18 covers consuming C-style
+APIs from C++ code; the two are independent.
+
+These rules exist because a C-style signature is the only documentation
+available to a caller who reads it cold. Direction, role, and failure model
+must be visible in the prototype itself, without requiring the reader to
+trace back to a producing call or a separate doc block.
+
+### 6.1 Parameter ordering
+
+- Inputs must come first. Outputs must come last.
+- When a function takes an indexable container and an index that selects
+  within it, the container comes first and the index comes second.
+- Do not invert the container/index order. The container-first form matches
+  every well-known C and C++ accessor convention (`arr[i]`, `vec.at(i)`,
+  `PyList_GetItem(list, i)`, and so on) and is what every reader expects.
+  Inverting it costs surprise and buys nothing semantic.
+
+### 6.2 Parameter naming
+
+- Input parameters must use the `in_` prefix.
+- Output parameters must use the `out_` prefix.
+- A parameter name must describe what the value *is*, not what role it played
+  in a previous call. Do not name an input `result` because it was the output
+  of the producer that built it. Name it after the thing it carries.
+- An optional output should retain the local convention's nullability suffix
+  (such as `_or_null`) so callers can read direction and optionality from the
+  signature alone.
+- Ownership semantics (borrowed, transferred-in, transferred-out) are an
+  orthogonal axis from data direction. They belong in the per-function
+  doc block and are not encoded in the parameter name.
+
+```c
+/* Good */
+gln_status_t gln_backend_open_fints(
+    const gln_fints_config_t*   in_config,
+    gln_state_store_t*          in_state_store,
+    gln_continuation_store_t*   in_cont_store_or_null,
+    gln_secret_t*               in_pin,
+    gln_backend_t**             out_backend,
+    gln_error_t*                out_err_or_null);
+
+const gln_fints_account_t* gln_account_list_at(
+    const gln_account_list_t*   in_list,
+    size_t                      in_index);
+```
+
+```c
+/* Bad: input named after the producer's output role; no direction prefix */
+const gln_fints_account_t* gln_account_list_at(
+    const gln_account_list_t* result,
+    size_t                    index);
+```
+
+### 6.3 Return convention
+
+- A function that can fail must return a status code. Its result must be
+  delivered through an `out_` parameter, not through the return value.
+- A function with no meaningful status to report must return `void`. Do not
+  return a value that callers will systematically ignore (a status that is
+  always success, an `int` that is always zero, an unused enum).
+- A function may return its result directly only when it meets the
+  triviality test in 6.4. This is the only sanctioned exception to the
+  status-return rule.
+
+```c
+/* Good: produces a handle, can fail at runtime */
+gln_status_t gln_backend_open_fints(
+    /* ... */
+    gln_backend_t** out_backend,
+    gln_error_t*    out_err_or_null);
+
+/* Good: pure accessor, trivial under 6.4 */
+size_t gln_account_list_count(const gln_account_list_t* in_list);
+
+/* Good: no meaningful status to report */
+void gln_account_list_destroy(gln_account_list_t* in_list);
+```
+
+```c
+/* Bad: returns the produced handle directly even though it allocates and can fail */
+gln_backend_t* gln_backend_open_fints(/* ... */);
+
+/* Bad: returns a status that callers can never act on */
+int gln_account_list_destroy(gln_account_list_t* in_list);
+```
+
+### 6.4 Trivial functions and the const-method test
+
+A function may return its result directly only when *all* of the following
+hold:
+
+- It does not mutate any input or any caller-visible state. If it were a C++
+  member function, marking it `const` would be honest.
+- It performs no I/O.
+- It performs no allocation that the caller is responsible for releasing.
+- Its only possible failure modes are predictable, locally checkable input
+  validation: null pointer, out-of-range index, missing optional field.
+  These may be encoded as null or sentinel returns and require no separate
+  status channel.
+
+A function that does not meet all four conditions is not trivial under this
+rule, even if its body is short.
+
+- A function that allocates is not trivial, even if allocation almost never
+  fails.
+- A function that performs I/O is not trivial, even if the I/O usually
+  succeeds.
+- A function whose failure modes include domain-level conditions ("the bank
+  rejected the request", "the file is malformed", "the token expired") is
+  not trivial, regardless of how short its body is.
+
+Trivial functions in this sense are typically `_count`, `_at`, `_size`,
+getters over a materialized result handle, and pure conversions between
+compile-time-known representations.
+
+## 7. Review Checklist
 
 - Names are descriptive and follow the applicable naming rules.
 - The change is focused and does not include unrelated formatting churn.
@@ -834,3 +957,5 @@ void flush_rects_buffer(const glm::mat4& pmv);
 - Comments explain intent or constraints instead of restating code.
 - Constants, types, and ownership boundaries are clear.
 - Module-local consistency is preserved.
+- C-style API surfaces follow the parameter ordering, naming, return
+  convention, and triviality rules in section 6.
