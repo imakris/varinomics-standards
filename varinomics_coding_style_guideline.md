@@ -177,10 +177,19 @@ class Plot_renderer
 
 ### 5.3 Members, statics, and constants
 
-- Instance members must use the `m_` prefix.
+- Instance members of behavioral types must use the `m_` prefix.
+- A type is behavioral when it exists primarily to provide behavior:
+  it has methods, custom constructors or destructors, lifecycle
+  semantics, encapsulated invariants, or other functionality beyond
+  data storage. Plain data aggregates do not require the `m_` prefix
+  on their fields, even when they use `Capitalized_words` naming
+  because they hold ownership-heavy members like `std::vector` or
+  `std::string` that disqualify them from the `_t` form per 5.2.
 - Static data members must use the `s_` prefix.
 - Namespace-scope compile-time constants must use the `k_` prefix, be
   `constexpr`, and use `snake_case`.
+
+Behavioral type:
 
 ```cpp
 class Plot_renderer
@@ -194,6 +203,17 @@ private:
 };
 
 constexpr float k_grid_line_half_px = 0.7f;
+```
+
+Passive aggregate (`Capitalized_words` because of ownership-heavy
+members; fields stay unprefixed):
+
+```cpp
+struct Bootstrap_request
+{
+    std::string                language = "de";
+    std::optional<std::string> profile_name = std::nullopt;
+};
 ```
 
 ### 5.4 Namespaces
@@ -438,7 +458,75 @@ using block_t = std::variant<paragraph_block_t,
                              page_break_block_t>;
 ```
 
-### 5.9 Control blocks and switches
+### 5.9 Lambda layout
+
+A short lambda whose capture, parameter list, and body all fit comfortably on
+one line may stay on one line. When a lambda has a non-trivial capture clause,
+multiple parameters, or a multi-statement body, format the lambda so each of
+its three structural regions reads cleanly.
+
+- A lambda has three structural regions: the capture clause `[ ... ]`, the
+  parameter list `( ... )`, and the body `{ ... }`. When the lambda wraps,
+  treat the opening and closing tokens of each region as sigils that frame
+  that region; place each region's content one indent level deeper than the
+  sigils.
+- Open the capture list by placing `[` at the end of the lambda's start line.
+  Put each capture on its own following line, indented two levels (8 spaces in
+  4-space-indent style) from the lambda's enclosing statement.
+- Place the closing `](` on its own line, indented one level (4 spaces) from
+  the enclosing statement. The opening `(` of the parameter list stays on
+  that same line.
+- Put each parameter on its own following line, indented two levels.
+- Place the closing `)` of the parameter list and the opening `{` of the body
+  on separate lines, both indented one level. Place the body content at two
+  levels. Place the closing `};` at one level.
+- The result is a stair-step layout where the structural sigils (`[`, `](`,
+  `{`, `};`) sit at one indent level and the content sits at the next, making
+  the three regions visually distinct.
+- This form applies when the lambda has multiple captures, non-trivial
+  captures (moves, references, or initializing expressions), multiple
+  parameters, or a body that exceeds a single line. It is not required for
+  trivial lambdas.
+- For a lambda that is itself an argument to a function call rather than the
+  right-hand side of an assignment, apply the same indentation pattern with
+  the lambda's logical start as the reference indent.
+
+```cpp
+some_callback = [
+        opts_ref = std::cref(opts),
+        command_label,
+        internal_command,
+        resume_path_override = std::move(resume_path_override)
+    ](
+        const ::cli::capi::Interrupt_info& interrupt,
+        ::cli::capi::Continuation /*continuation*/)
+    {
+        return emit_capi_interrupt_envelope(
+            command_label,
+            internal_command,
+            opts_ref.get(),
+            interrupt,
+            resume_path_override);
+    };
+```
+
+Not allowed:
+
+```cpp
+some_callback = [opts_ref = std::cref(opts), command_label, internal_command,
+                 resume_path_override = std::move(resume_path_override)](
+                    const ::cli::capi::Interrupt_info& interrupt,
+                    ::cli::capi::Continuation /*continuation*/) {
+    return emit_capi_interrupt_envelope(
+        command_label,
+        internal_command,
+        opts_ref.get(),
+        interrupt,
+        resume_path_override);
+};
+```
+
+### 5.10 Control blocks and switches
 
 - Every `if`, `else`, `for`, `while`, `do`, and `catch` block must use braces.
 - `case` labels must be indented one level under `switch`.
@@ -549,7 +637,7 @@ if ((c & 0xF8) == 0xF0) {
 }
 ```
 
-### 5.10 Spacing and formatting
+### 5.11 Spacing and formatting
 
 - Readability, not line packing, governs line length.
 - Treat roughly 100 columns as a warning signal: consider whether splitting the
@@ -687,7 +775,7 @@ const int height_px = std::max(1, static_cast<int>(std::round(whole_rect.height(
 int idx             = 0;
 ```
 
-### 5.11 Macros
+### 5.12 Macros
 
 - Keep multi-line macro continuations visually tidy.
 - Either place each trailing `\` one space after the final token or align the `\`
@@ -708,7 +796,7 @@ int idx             = 0;
     while (false)
 ```
 
-### 5.12 Functions and APIs
+### 5.13 Functions and APIs
 
 - Function names must use `snake_case`.
 - Read-only member functions must be marked `const`.
@@ -723,7 +811,7 @@ constexpr double k_eps = 1e-6;
 }
 ```
 
-### 5.13 Structs, classes, and ownership boundaries
+### 5.14 Structs, classes, and ownership boundaries
 
 - Use plain data structs for passive aggregates and result bundles.
 - Use classes for behavioral or owning types.
@@ -753,7 +841,7 @@ private:
 };
 ```
 
-### 5.14 Constants, literals, and enums
+### 5.15 Constants, literals, and enums
 
 - Compile-time constants must use `constexpr` whenever possible.
 - Numeric literals should use explicit suffixes where type matters.
@@ -772,7 +860,7 @@ enum class Display_style
 };
 ```
 
-### 5.15 Error handling and logging
+### 5.16 Error handling and logging
 
 - Use assertions for invariants and programmer errors.
 - Use structured logging for non-fatal diagnostics.
@@ -791,7 +879,7 @@ enum class Display_style
 - Exception-based and status-return-based error handling are both acceptable; each
   module should choose deliberately and remain internally consistent.
 
-### 5.16 Qt and OpenGL profile
+### 5.17 Qt and OpenGL profile
 
 - Resource creation and cleanup must follow the relevant Qt thread or render-lifecycle
   rules.
@@ -799,7 +887,7 @@ enum class Display_style
 - Keep OpenGL state changes local and leave the state machine in a known condition.
 - Prefer bounded draws and batching when the rendering path allows it.
 
-### 5.17 Comments and API documentation
+### 5.18 Comments and API documentation
 
 - Comments should state what matters and why it matters.
 - Public APIs and non-trivial internals should use concise Doxygen-style comments
@@ -813,7 +901,7 @@ enum class Display_style
 void flush_rects_buffer(const glm::mat4& pmv);
 ```
 
-### 5.18 Interfacing with C and C-style APIs
+### 5.19 Interfacing with C and C-style APIs
 
 - API conventions win when a C or system API has a documented local style.
 - C-style casts are acceptable where they are idiomatic, direct, and semantically
@@ -832,7 +920,7 @@ C-style API surface, including ABI-stable headers that ship to external
 consumers and shared-object exports. It applies whether the implementation
 language is C or C++.
 
-The rules below are about API *design*. Section 5.18 covers consuming C-style
+The rules below are about API *design*. Section 5.19 covers consuming C-style
 APIs from C++ code; the two are independent.
 
 These rules exist because a C-style signature is the only documentation
@@ -855,8 +943,17 @@ trace back to a producing call or a separate doc block.
 - Input parameters must use the `in_` prefix.
 - Output parameters must use the `out_` prefix.
 - A parameter name must describe what the value *is*, not what role it played
-  in a previous call. Do not name an input `result` because it was the output
-  of the producer that built it. Name it after the thing it carries.
+  in a previous call. The test is on the parameter name itself, not on its
+  type: read the name in the local call and ask whether it describes the
+  value or only marks where the value came from.
+- A name like `result` is a *role-name* when it merely marks "this came from
+  a producer's output" and the value's actual identity in the local call is
+  something else (e.g., a list, an account, a transfer). In that case the
+  role-name must be replaced with the content noun. The same word is a
+  *content-name* when it really is the noun for what the parameter carries
+  (e.g., a function in a `*_result_*` family that reads or releases the
+  result it was given) and is acceptable then. The reader applies this test
+  by reading the name in context, without needing to inspect the type.
 - An optional output should retain the local convention's nullability suffix
   (such as `_or_null`) so callers can read direction and optionality from the
   signature alone.
@@ -880,10 +977,20 @@ const gln_fints_account_t* gln_account_list_at(
 ```
 
 ```c
-/* Bad: input named after the producer's output role; no direction prefix */
+/* Bad: input named after the producer's output role; no direction prefix.
+   Reading the name `result` in this call answers "this came from
+   gln_fints_list_accounts," not "this is a list" -- so it is a role-name. */
 const gln_fints_account_t* gln_account_list_at(
     const gln_account_list_t* result,
     size_t                    index);
+```
+
+```c
+/* Acceptable: `result` reads as a content noun in this call. The function
+   operates on a result handle as its primary subject, so the name describes
+   what the parameter carries rather than where it came from. */
+const char* gln_fints_submit_transfer_result_status(
+    const gln_fints_submit_transfer_result_t* in_result);
 ```
 
 ### 6.3 Return convention
