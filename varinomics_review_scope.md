@@ -78,6 +78,31 @@ If a concern might be elective *or* baseline, err toward baseline when the conse
 3. Consider the product domain. Banking ≠ CLI utility ≠ game ≠ government service - baselines differ.
 4. If still unclear, **ask the user** what's in scope before writing the report.
 
+## Found failures must be reported, regardless of provenance
+
+The scope rules above govern *what categories* of issue a reviewer flags. This section governs *how findings are reported once made*. A reviewer or executor who has observed a failing test, a build error, a crash, a corrupted output, a leaked resource, or any other concrete failure must say so plainly in the report - whether or not the failure appears to have been introduced by the change under review.
+
+The phrasing "X fails, but it's pre-existing" is forbidden. So is its softer cousin "X fails on master too, so out of scope." Pre-existence is not a license to omit. It is, at most, context to attach to the same finding.
+
+The minimum a report must do when a failure is observed:
+
+- **Name the failure.** Test name, error message, stack trace location, or the exact symptom. Not "some tests fail."
+- **Attach it to the report's findings list.** Not as a footnote, not in conversation, not "for what it's worth." A finding.
+- **State whether the change under review introduced it, perpetuates it, or merely exposed it.** All three categories are fair game; pretending none of them exists is not.
+
+The failure mode this rule guards against is the cumulative one: every reviewer who silently passes over a pre-existing failure makes it harder to find later, and contributes to a culture where the next failing test is also "not my batch's problem." The cost of recording a finding is one paragraph. The cost of letting failures accumulate unmentioned, across many reviews, is a project where nobody knows what is actually broken.
+
+### Multiple failures escalate
+
+When a single review surfaces more than one failure - including a mix of "introduced by this change" and "pre-existing" - the report must do more than list them:
+
+1. **Be louder about the count.** A summary line stating the total number of observed failures belongs at the top of the report, not buried in the findings list. "Three failing tests, one new and two pre-existing" is the kind of headline the next reader needs.
+2. **Group findings.** Distinguish failures that block the change under review from failures that pre-date it. Both are reported; only the categorisation differs.
+3. **Propose a concrete remediation plan.** For each failure, name the file and the rough fix shape. If the fix is genuinely unknown, say so explicitly and point at what would have to be investigated. Vague reassurance ("should be looked at later") does not count.
+4. **Suggest delegating the remediation to an agent.** Multiple-failure cleanups are exactly the workload an automated executor handles well: mechanical, well-scoped, repetitive. A review that surfaces several failures should close with a recommendation to feed the remediation plan to an agent, not with a hand-off to "future cleanup time."
+
+A review that observes failures but routes them anywhere other than the findings list is a defective review, regardless of what the diff itself looks like.
+
 ## Summary
 
 Two buckets:
@@ -86,3 +111,5 @@ Two buckets:
 - **Elective features** (i18n, a11y where not legally baseline, cross-platform beyond target, specific architectural patterns, specific compliance regimes, feature completeness). In scope only when adopted, by explicit statement or consistent convention. Advocacy for un-adopted electives belongs in a product discussion, not in a review.
 
 The failure mode the rule guards against is the reviewer imposing an elective that the project has chosen not to take on. It does not, and must not, protect bugs or vulnerabilities - those are baseline concerns regardless of what any document says.
+
+A separate failure mode, addressed in "Found failures must be reported, regardless of provenance" above, is the reviewer who *does* see a real failure but omits it because the failure is pre-existing or seems out of scope. Every observed failure goes in the findings list. Multiple observed failures escalate to a remediation plan with a delegation suggestion.
