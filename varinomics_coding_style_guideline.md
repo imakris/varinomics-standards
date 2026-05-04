@@ -111,6 +111,52 @@ profiles.
   changed, revert that noise immediately.
 - Do not present line-ending-only diffs as meaningful work.
 
+### 3.8 Defensive checks must guard real possibilities
+
+A guard - a null check, a range check, a type check, an `if (handler)` test
+before a callback, an `is_valid()` test before a use - is justified only when
+the guarded case can actually occur given the contracts of the surrounding
+code. A guard for a case that can never happen is **dead defense**, and it
+is harmful, not neutral.
+
+Dead defense:
+
+- **Misleads readers.** A reader who sees `if (x.handler)` reasonably
+  concludes that `x.handler` can be null. They then reason about callers
+  that supply `x` without `handler` set, plan tests for that case, and
+  carry the assumption forward into other code. None of that work matches
+  reality.
+- **Dilutes coverage.** Untestable branches inflate cyclomatic complexity
+  and silently lower the meaningful coverage of the test suite. A "100%
+  branch coverage" target is fiction when half the branches cannot fire.
+- **Propagates by imitation.** Contributors infer house style from
+  surrounding code. A function full of dead defensive checks teaches the
+  next contributor to add more of them, copying the pattern into places it
+  was never warranted in the first place.
+- **Survives the failure mode it was meant to guard.** When upstream code
+  changes to make the failure case impossible (a new invariant, validation
+  closer to the source, a contract tightening), the now-dead guard rarely
+  gets removed. Years later it reads as historical scar tissue, and a
+  reader reasoning about the code cannot tell whether it is load-bearing.
+
+Before adding a guard, ask: *what concrete code path triggers the guarded
+case?* If you cannot name one, do not add the guard. If the case can occur
+but only because of an upstream weakness, prefer fixing the upstream
+weakness so the guard is not needed.
+
+When previously-real failure modes are closed off (validation moves
+upstream, an invariant is established, a contract is tightened), the
+guards they motivated must be deleted in the same change that closes the
+failure mode. A guard left behind as belt-and-suspenders is dead defense
+the moment the upstream check lands.
+
+This rule is complementary to the change-governance rule against silent
+degradation (rule 2 in `varinomics_change_governance.md`). Real failures
+must surface loudly; impossible failures must not be guarded for at all.
+The two rules together describe the only acceptable shape of defensive
+code: a guard exists if and only if it has a concrete failure case it
+catches.
+
 ## 4. Language-Specific Profiles
 
 - Each language used in a Varinomics product should have a profile section or a
